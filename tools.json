@@ -6,6 +6,12 @@
     "description": "Decode Base64 text to PGP keys and decrypt messages"
   },
   {
+    "folder": "DarkHue",
+    "name": "darkhue",
+    "icon": "fas fa-image",
+    "description": "Flip brightness while keeping original color hues"
+  },
+  {
     "folder": "json",
     "name": "JSON Tool",
     "icon": "fas fa-code",

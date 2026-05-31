@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkHue</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #0a0a0a; color: #eaeaea;
+      font-family: system-ui, sans-serif;
+      margin: 0; padding: 15px;
+      height: 100vh; display: flex; flex-direction: column;
+    }
+    h2 { margin: 8px 0 15px; text-align: center; }
+    button, label {
+      padding: 12px 18px; background: #222; color: white;
+      border: none; border-radius: 8px; font-size: 15px; cursor: pointer;
+      text-align: center; display: inline-block;
+    }
+    button:hover, label:hover { background: #333; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status { color: #aaa; margin-left: 10px; }
+    input[type="file"] { display: none; }
+    #previewWrapper {
+      flex: 1; margin: 12px 0;
+      background: #111; border: 1px solid #333;
+      border-radius: 8px; padding: 12px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    #preview { max-width: 100%; max-height: 100%; object-fit: contain; display: none; }
+    #placeholder { color: #666; font-size: 14px; }
+    .dl { display: none; gap: 8px; flex-wrap: wrap; }
+    .dl button { flex: 1; min-width: 110px; }
+  </style>
+</head>
+<body>
+  <h2>DarkHue</h2>
+
+  <div>
+    <label for="fileInput">Upload Image</label>
+    <input type="file" id="fileInput" accept="image/*">
+    <span id="status">Idle</span>
+  </div>
+
+  <div id="previewWrapper">
+    <span id="placeholder">No image uploaded</span>
+    <img id="preview" alt="Processed output">
+  </div>
+
+  <div class="dl" id="dl">
+    <button onclick="save('png')">PNG</button>
+    <button onclick="save('jpeg')">JPEG</button>
+    <button onclick="save('webp')">WebP</button>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const placeholder = document.getElementById('placeholder');
+    const dlDiv = document.getElementById('dl');
+    const status = document.getElementById('status');
+
+    let activeCanvas = null;
+
+    fileInput.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      status.innerText = 'Processing...';
+      const reader = new FileReader();
+
+      reader.onload = event => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+
+          ctx.filter = 'invert(1) hue-rotate(180deg)';
+          ctx.drawImage(img, 0, 0);
+
+          activeCanvas = canvas;
+
+          if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+
+          canvas.toBlob(blob => {
+            preview.src = URL.createObjectURL(blob);
+            placeholder.style.display = 'none';
+            preview.style.display = 'block';
+            dlDiv.style.display = 'flex';
+            status.innerText = 'Done';
+          }, 'image/png');
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function save(type) {
+      if (!activeCanvas) return;
+
+      const mimeType = `image/${type}`;
+      activeCanvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `darkhue_${Date.now()}.${type}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }, mimeType, type === 'jpeg' ? 0.92 : undefined);
+    }
+  </script>
+</body>
+</html>
