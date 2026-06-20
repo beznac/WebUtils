@@ -1,124 +1,304 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGR Parser</title>
+    <title>Parser Bonuri SGR</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, header, main, .card, .input-row { display: flex; flex-direction: column; }
-        body { background: #0a0a0a; color: #eaeaea; font-family: system-ui, sans-serif; padding: 20px; align-items: center; min-height: 100vh; }
+        body, header, main, .card, .input-row, .entry-header { display: flex; flex-direction: column; }
+
+        body {
+            background: #0a0a0a;
+            color: #eaeaea;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            align-items: center;
+            min-height: 100vh;
+        }
+
         header, main { width: 100%; max-width: 600px; }
-        header { flex-direction: row; justify-content: space-between; align-items: center; margin: 8px 0 15px; }
-        h2 { font-size: 1.5rem; font-weight: 700; flex: 1; text-align: center; margin-right: 40px; color: #fff; }
+
+        header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0 15px;
+        }
+
+        h2 { font-size: 1.5rem; font-weight: 700; text-align: center; flex: 1; margin-right: 40px; color: #fff; }
         main { gap: 20px; }
-        .header-btn { color: #aaa; padding: 8px; font-size: 1.3rem; text-decoration: none; }
+
+        .header-btn { color: #aaa; padding: 8px; font-size: 1.3rem; text-decoration: none; transition: color 0.2s; }
         .header-btn:hover { color: #fff; }
-        .card { background: #111; border: 1px solid #333; border-radius: 8px; padding: 20px; gap: 14px; }
-        #video-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; overflow: hidden; display: none; }
+
+        .card {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            gap: 14px;
+            transition: all 0.2s;
+        }
+        .card:hover { border-color: #555; background: #141414; }
+
+        label { font-size: 0.95rem; font-weight: 600; color: #aaa; margin-bottom: -4px; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            letter-spacing: 1px;
+            font-family: monospace;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #555; outline: none; }
+
+        #video-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            display: none;
+            position: relative;
+        }
         #webcam-video { width: 100%; height: 100%; object-fit: cover; }
-        .input-row { flex-direction: row; gap: 10px; }
-        .btn { flex: 1; padding: 12px; background: #222; color: #fff; border: 1px solid #333; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn:hover { background: #333; }
-        input { width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; font-family: monospace; font-size: 16px; }
+
+        .input-row { flex-direction: row; gap: 10px; align-items: center; }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #333; border-color: #555; }
+
+        .error { color: #ff5555; background: #221111; border: 1px solid #442222; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; display: none; }
-        th { color: #888; font-weight: 500; font-size: 14px; text-align: left; padding: 8px; }
-        td { color: #eee; font-weight: bold; font-family: monospace; padding: 8px; }
-        .error { color: #ff5555; background: #221111; padding: 10px; border-radius: 6px; display: none; font-size: 14px; }
-        #toast { position: fixed; bottom: 20px; background: #222; color: #fff; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: 0.3s; pointer-events: none; }
-        #toast.show { opacity: 1; }
+        th, td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        th { color: #888; font-weight: 500; font-size: 14px; width: 45%; }
+        td { font-weight: bold; color: #eee; font-family: monospace; font-size: 15px; }
+        .highlight { color: #16a34a; font-size: 1.2rem; }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            background: rgba(34, 34, 34, 0.9);
+            color: #fff;
+            border: 1px solid #444;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 1000;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body>
 
-<header>
-    <a href="https://zyg0t.github.io/WebUtils/" class="header-btn"><i class="fas fa-shapes"></i></a>
-    <h2>SGR Parser</h2>
-</header>
+  <header>
+    <a href="https://zyg0t.github.io/WebUtils/" class="header-btn" title="WebUtils"><i class="fas fa-shapes"></i></a>
+    <h2>Cititor Cod SGR</h2>
+  </header>
 
-<main>
+  <main>
     <section class="card">
-        <div id="video-container"><video id="webcam-video" playsinline></video></div>
-        <div class="input-row">
-            <button id="start-cam-btn" class="btn"><i class="fas fa-camera"></i> Camera</button>
-        </div>
-        <input type="text" id="barcodeInput" placeholder="Enter 28-digit code..." maxlength="28">
-        <div id="errorMessage" class="error"></div>
-        <table id="resultTable">
-            <tr><th>Value:</th><td id="resAmount">-</td></tr>
-            <tr><th>Items:</th><td id="resItems">-</td></tr>
-            <tr><th>Time:</th><td id="resTime">-</td></tr>
-        </table>
-    </section>
-</main>
+      <div id="video-container"><video id="webcam-video" playsinline></video></div>
 
-<canvas id="qr-canvas" style="display: none;"></canvas>
-<div id="toast"></div>
+      <div class="input-row">
+        <button id="start-cam-btn" class="btn"><i class="fas fa-camera"></i> Scanează QR</button>
+      </div>
+
+      <label for="barcodeInput">Introdu cele 28 de cifre:</label>
+      <input type="text" id="barcodeInput" placeholder="Ex: 9800091919062614031802650015" maxlength="28" autocomplete="off">
+
+      <div id="errorMessage" class="error"></div>
+
+      <table id="resultTable">
+        <tr>
+            <th>Valoare Bon:</th>
+            <td id="resAmount" class="highlight">-</td>
+        </tr>
+        <tr>
+            <th>Total Ambalaje:</th>
+            <td id="resItems">-</td>
+        </tr>
+        <tr>
+            <th>Ora Emitere:</th>
+            <td id="resTime">-</td>
+        </tr>
+        <tr>
+            <th>ID Magazin:</th>
+            <td id="resStore">-</td>
+        </tr>
+        <tr>
+            <th>Prefix Sistem:</th>
+            <td id="resPrefix">-</td>
+        </tr>
+        <tr>
+            <th>Cod Securitate:</th>
+            <td id="resSec">-</td>
+        </tr>
+      </table>
+    </section>
+  </main>
+
+  <canvas id="qr-canvas" style="display: none;"></canvas>
+  <div id="toast"></div>
 
 <script>
-    let videoStream = null, animationFrameId = null;
+    let videoStream = null;
+    let animationFrameId = null;
+
+    const barcodeInput = document.getElementById('barcodeInput');
+    const errorDiv = document.getElementById('errorMessage');
+    const table = document.getElementById('resultTable');
     const video = document.getElementById('webcam-video');
     const canvas = document.getElementById('qr-canvas');
     const ctx = canvas.getContext('2d');
 
+    // UI Toast setup
     function toast(msg) {
         const t = document.getElementById('toast');
-        t.textContent = msg; t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2000);
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t.timer);
+        t.timer = setTimeout(() => t.classList.remove('show'), 2000);
     }
+
+    // Main Parser Logic
+    barcodeInput.addEventListener('input', function(e) {
+        processBarcode(e.target.value.trim());
+    });
+
+    function processBarcode(rawValue) {
+        errorDiv.style.display = 'none';
+        table.style.display = 'none';
+
+        if (rawValue.length === 0) return;
+
+        if (!/^\d+$/.test(rawValue) || rawValue.length !== 28) {
+            errorDiv.textContent = "Codul trebuie să conțină exact 28 de cifre digitale.";
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Parse logic
+        const prefix = rawValue.substring(0, 2);
+        const storeId = rawValue.substring(2, 10);
+        const hourMinute = rawValue.substring(14, 18);
+        const seconds = rawValue.substring(18, 20);
+        const rawAmount = rawValue.substring(20, 24);
+        const checksum = rawValue.substring(24, 28);
+
+        const amountRon = (parseInt(rawAmount, 10) / 10).toFixed(2);
+        const totalItems = Math.floor(parseFloat(amountRon) / 0.50);
+        const formattedTime = `${hourMinute.substring(0, 2)}:${hourMinute.substring(2, 4)}:${seconds}`;
+
+        // Assign UI text
+        document.getElementById('resPrefix').textContent = prefix;
+        document.getElementById('resStore').textContent = storeId;
+        document.getElementById('resTime').textContent = formattedTime;
+        document.getElementById('resAmount').textContent = `${amountRon} RON`;
+        document.getElementById('resItems').textContent = `${totalItems} bucăți`;
+        document.getElementById('resSec').textContent = checksum;
+
+        table.style.display = 'table';
+    }
+
+    // Camera control logic
+    document.getElementById('start-cam-btn').onclick = toggleCamera;
 
     async function toggleCamera() {
         if (videoStream) {
-            videoStream.getTracks().forEach(t => t.stop());
-            cancelAnimationFrame(animationFrameId);
-            videoStream = null;
-            document.getElementById('video-container').style.display = "none";
-            document.getElementById('start-cam-btn').innerHTML = '<i class="fas fa-camera"></i> Camera';
+            stopCamera();
             return;
         }
 
         try {
-            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            // Enhanced constraints for reliability across mobile viewports
+            videoStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+
             video.srcObject = videoStream;
-            // The magic fix: ensure video is ready before showing
-            video.onloadedmetadata = () => {
-                video.play();
-                document.getElementById('video-container').style.display = "block";
-                document.getElementById('start-cam-btn').innerHTML = '<i class="fas fa-stop"></i> Stop';
-                tick();
+            video.setAttribute("playsinline", true); // Crucial for iOS Safari embed
+            video.play();
+
+            document.getElementById('video-container').style.display = "block";
+            document.getElementById('start-cam-btn').innerHTML = '<i class="fas fa-stop"></i> Oprește Camera';
+
+            const tick = () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" });
+
+                    if (code) {
+                        // If it's an SGR link, clean it to extract the data string
+                        let qrData = code.data.trim();
+                        const match = qrData.match(/CODE=([\w-]+)/i);
+                        if (match) qrData = match[1];
+
+                        barcodeInput.value = qrData;
+                        processBarcode(qrData);
+                        toast("Cod detectat cu succes!");
+                        stopCamera();
+                        return;
+                    }
+                }
+                if (videoStream) animationFrameId = requestAnimationFrame(tick);
             };
-        } catch (e) { toast("Camera Error"); }
-    }
-
-    function tick() {
-        if (!videoStream) return;
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.height = video.videoHeight; canvas.width = video.videoWidth;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-            if (code) {
-                document.getElementById('barcodeInput').value = code.data;
-                process(code.data);
-                toggleCamera();
-                return;
-            }
+            animationFrameId = requestAnimationFrame(tick);
+        } catch (err) {
+            console.error(err);
+            toast("Eroare Cameră: Asigură-te că folosești HTTPS!");
         }
-        animationFrameId = requestAnimationFrame(tick);
     }
 
-    function process(val) {
-        if (val.length !== 28) return;
-        const amt = (parseInt(val.substring(20, 24), 10) / 10).toFixed(2);
-        document.getElementById('resAmount').textContent = amt + " RON";
-        document.getElementById('resItems').textContent = Math.floor(amt / 0.5) + " pieces";
-        document.getElementById('resTime').textContent = val.substring(14, 16) + ":" + val.substring(16, 18);
-        document.getElementById('resultTable').style.display = 'table';
+    function stopCamera() {
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop());
+        }
+        cancelAnimationFrame(animationFrameId);
+        videoStream = null;
+        animationFrameId = null;
+        document.getElementById('video-container').style.display = "none";
+        document.getElementById('start-cam-btn').innerHTML = '<i class="fas fa-camera"></i> Scanează QR';
     }
-
-    document.getElementById('start-cam-btn').onclick = toggleCamera;
-    document.getElementById('barcodeInput').oninput = (e) => process(e.target.value);
 </script>
+
 </body>
 </html>
