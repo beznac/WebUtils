@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SGR Multi-Tool</title>
+  <title>QuickSGR</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#0a0a0a;color:#eaeaea;font-family:system-ui,sans-serif;padding:15px;display:flex;flex-direction:column;align-items:center;min-height:100vh}
@@ -46,7 +46,7 @@
 <body>
 <header>
     <a href="https://zyg0t.github.io/WebUtils/" class="header-btn"><i class="fas fa-shapes"></i></a>
-    <h2>SGR</h2>
+    <h2>QuickSGR</h2>
 </header>
 <main>
   <section class="card">
@@ -69,24 +69,22 @@
     </div>
   </section>
 
-  <section class="card">
+    <section class="card">
     <div class="card-title"><div class="title-left"><i class="fas fa-barcode"></i> Voucher Wallet</div></div>
-    <div id="video-container"><div id="reader" style="width:100%;height:100%"></div></div>
+    <div id="video-container"><video id="video" playsinline autoplay muted></video></div>
     <button id="camBtn"><i class="fas fa-camera"></i> Toggle Camera</button>
     <input type="text" id="barcodeInput" placeholder="28-digit manual entry..." maxlength="28">
     <div class="voucher-header"><span class="voucher-title">Saved Vouchers</span><span class="voucher-total" id="voucher-total">0.00 RON</span></div>
     <div class="voucher-list" id="voucher-list"></div>
-  </section>
+    </section>
 </main>
 <div id="toast"></div>
 
 <script>
 const PROXY = "https://corsproxy.lmarkyos.workers.dev/?url=";
 const RAD = 15;
-
 let sgrNodes = JSON.parse(localStorage.getItem('sgr_nodes')) || [];
 let vouchers = JSON.parse(localStorage.getItem('sgr_vouchers')) || [];
-
 const $ = id => document.getElementById(id);
 
 const toast = msg => {
@@ -132,43 +130,34 @@ if (sgrNodes.length) {
 
 $('startBtn').onclick = async () => {
     if (!navigator.geolocation) return toast("Geolocation not supported");
-
     $('startBtn').disabled = true;
     $('dl').style.display = 'none';
     $('log').textContent = '';
     sgrNodes = [];
-
     try {
         log("Acquiring position...");
         const pos = await getFreshPos();
         const uLat = pos.coords.latitude;
         const uLon = pos.coords.longitude;
-
         log("Fetching nodes...");
         const all = await (await fetch(PROXY + encodeURIComponent('https://sgrstatus.ro/wp-json/custom/v1/locations/'))).json();
-
         const f = all.filter(l => dist(uLat, uLon, l.latitude, l.longitude) <= RAD);
         log(`Found ${f.length} nodes`);
-
         for (let [i, l] of f.entries()) {
             const res = await (await fetch(PROXY + encodeURIComponent(
                 `https://sgrstatus.ro/wp-json/custom/v1/location_info/?lat=${l.latitude}&lon=${l.longitude}`
             ))).json();
-
             sgrNodes.push({
                 name: res.name || "Node",
                 status: res.status || "N/A",
                 lat: l.latitude,
                 lon: l.longitude
             });
-
             if (i % 5 === 0) log(`Processed ${i + 1}/${f.length}`);
         }
-
         const now = new Date().toLocaleString('en-GB', { hour12: false });
         localStorage.setItem('sgr_nodes', JSON.stringify(sgrNodes));
         localStorage.setItem('sgr_nodes_updated', now);
-
         $('last-update').textContent = `Updated: ${now}`;
         $('dl').style.display = 'flex';
         log("Done.");
@@ -176,13 +165,11 @@ $('startBtn').onclick = async () => {
         log("Error: " + (e.message || "Failed"));
         if (localStorage.getItem('sgr_nodes')) $('dl').style.display = 'flex';
     }
-
     $('startBtn').disabled = false;
 };
 
 window.saveData = t => {
     let content, mimeType, filename = `sgr.${t}`;
-
     if (t === 'gpx') {
         mimeType = 'application/gpx+xml';
         content = `<?xml version="1.1"?><gpx>${sgrNodes.map(l =>
@@ -204,7 +191,6 @@ window.saveData = t => {
             }))
         });
     }
-
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([content], { type: mimeType }));
     a.download = filename;
@@ -213,13 +199,10 @@ window.saveData = t => {
 
 let userPos = null;
 let curHeading = 0;
-
 const updateLoc = () => {
     if (!userPos || !sgrNodes.length) return;
-
     let near = null;
     let minD = Infinity;
-
     sgrNodes.forEach(n => {
         const d = dist(userPos.lat, userPos.lon, n.lat, n.lon);
         if (d < minD) {
@@ -227,13 +210,11 @@ const updateLoc = () => {
             near = n;
         }
     });
-
     if (near) {
         $('nearest-name').textContent = near.name;
         $('nearest-dist').textContent = minD < 1
             ? `${Math.round(minD * 1000)}m`
             : `${minD.toFixed(2)}km`;
-
         $('direction-arrow').style.transform = `rotate(${calcBearing(userPos.lat, userPos.lon, near.lat, near.lon) - curHeading}deg)`;
     }
 };
@@ -241,12 +222,10 @@ const updateLoc = () => {
 $('startTrackerBtn').onclick = async () => {
     $('startTrackerBtn').style.display = 'none';
     $('locator-display').style.display = 'flex';
-
     const handleOri = e => {
         curHeading = e.webkitCompassHeading || (360 - e.alpha);
         updateLoc();
     };
-
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         try {
             if (await DeviceOrientationEvent.requestPermission() === 'granted') {
@@ -256,7 +235,6 @@ $('startTrackerBtn').onclick = async () => {
     } else {
         window.addEventListener('deviceorientationabsolute', handleOri);
     }
-
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(p => {
             userPos = { lat: p.coords.latitude, lon: p.coords.longitude };
@@ -265,14 +243,13 @@ $('startTrackerBtn').onclick = async () => {
     }
 };
 
-let scanner = null;
+let codeReader = null;
+let isScanning = false;
 
 const processBarcode = val => {
     if (!/^\d{28}$/.test(val)) return toast("Invalid 28-digit format");
-
     const amt = (parseInt(val.substring(20, 24), 10) / 10).toFixed(2);
     const hm = val.substring(14, 18);
-
     vouchers.unshift({
         id: Date.now().toString(),
         code: val,
@@ -282,7 +259,6 @@ const processBarcode = val => {
         time: `${hm.substring(0, 2)}:${hm.substring(2, 4)}:${val.substring(18, 20)}`,
         ts: Date.now()
     });
-
     localStorage.setItem('sgr_vouchers', JSON.stringify(vouchers));
     renderVouchers();
     toast(`Voucher saved • ${amt} RON`);
@@ -291,7 +267,6 @@ const processBarcode = val => {
 const renderVouchers = () => {
     const total = vouchers.reduce((s, v) => s + parseFloat(v.amount), 0).toFixed(2);
     $('voucher-total').textContent = `${total} RON`;
-
     $('voucher-list').innerHTML = vouchers.length ? vouchers.map(v => {
         const expired = (Date.now() - v.ts) > 31536000000;
         return `
@@ -326,12 +301,18 @@ $('barcodeInput').oninput = e => {
 };
 
 $('camBtn').onclick = async () => {
-    if (!scanner) {
-        scanner = new Html5Qrcode("reader");
+    if (!codeReader) {
+        codeReader = new ZXing.BrowserMultiFormatReader();
     }
 
+    const video = $('video');
+
     if (isScanning) {
-        await scanner.stop();
+        try { codeReader.reset(); } catch(e){}
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        video.srcObject = null;
         $('video-container').style.display = 'none';
         $('camBtn').innerHTML = `<i class="fas fa-camera"></i> Toggle Camera`;
         isScanning = false;
@@ -342,36 +323,31 @@ $('camBtn').onclick = async () => {
     $('camBtn').innerHTML = `<i class="fas fa-stop"></i> Stop Camera`;
     isScanning = true;
 
-    const config = {
-        fps: 20,
-        qrbox: { width: 400, height: 120 },
-        aspectRatio: 1.777778,
-        formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.QR_CODE
-        ]
-    };
-
     try {
-        await scanner.start(
-            { facingMode: "environment" },
-            config,
-            decodedText => {
-                if (/^\d{28}$/.test(decodedText)) {
-                    processBarcode(decodedText);
+        const devices = await codeReader.listVideoInputDevices();
+        const backCamera = devices.find(d =>
+            d.label.toLowerCase().includes('back') ||
+            d.label.toLowerCase().includes('rear')
+        ) || devices[0];
+
+        await codeReader.decodeFromVideoDevice(
+            backCamera ? backCamera.deviceId : undefined,
+            'video',
+            (result, err) => {
+                if (result) {
+                    const text = result.getText().trim();
+                    if (/^\d{28}$/.test(text)) {
+                        processBarcode(text);
+                    }
                 }
-            },
-            () => {} // silent error
+            }
         );
     } catch (e) {
-        toast("Camera error. Try on mobile with good lighting.");
+        toast("Camera error");
         console.error(e);
     }
 };
 
-let isScanning = false;
 renderVouchers();
 </script>
 </body>
