@@ -26,7 +26,6 @@
     .arrow-container{font-size:2.2rem;color:#aaa;width:60px;height:60px;display:flex;align-items:center;justify-content:center;transition:transform .3s}
     #log{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;font-family:monospace;font-size:13px;height:110px;overflow-y:auto;color:#aaa;white-space:pre-wrap}
     #video-container{width:100%;aspect-ratio:4/3;background:#000;border-radius:8px;overflow:hidden;position:relative;border:1px solid #333;display:none}
-    video{width:100%;height:100%;object-fit:cover}
     .voucher-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #222;padding-bottom:8px;margin-top:4px}
     .voucher-title{font-size:13px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px}
     .voucher-total{font-size:15px;font-weight:700;color:#ddd}
@@ -70,14 +69,14 @@
     </div>
   </section>
 
-  <section class="card">
+    <section class="card">
     <div class="card-title"><div class="title-left"><i class="fas fa-barcode"></i> Voucher Wallet</div></div>
     <div id="video-container"><video id="video" playsinline autoplay muted></video></div>
     <button id="camBtn"><i class="fas fa-camera"></i> Toggle Camera</button>
     <input type="text" id="barcodeInput" placeholder="28-digit manual entry..." maxlength="28">
     <div class="voucher-header"><span class="voucher-title">Saved Vouchers</span><span class="voucher-total" id="voucher-total">0.00 RON</span></div>
     <div class="voucher-list" id="voucher-list"></div>
-  </section>
+    </section>
 </main>
 <div id="toast"></div>
 
@@ -123,13 +122,14 @@ const log = m => {
     el.scrollTop = el.scrollHeight;
 };
 
+// Database & Locator (unchanged)
 if (sgrNodes.length) {
     $('dl').style.display = 'flex';
     const t = localStorage.getItem('sgr_nodes_updated');
     if (t) $('last-update').textContent = `Updated: ${t}`;
 }
 
-$('startBtn').onclick = async () => { /* unchanged */ };
+$('startBtn').onclick = async () => { /* unchanged - keep your original function */ };
 window.saveData = t => { /* unchanged */ };
 
 let userPos = null;
@@ -137,26 +137,12 @@ let curHeading = 0;
 const updateLoc = () => { /* unchanged */ };
 $('startTrackerBtn').onclick = async () => { /* unchanged */ };
 
-// === SCANNER ENGINE UPDATE ===
+// === IMPROVED ZXing + Photo Upload ===
 let codeReader = null;
 let isScanning = false;
 
-// Initialize reader explicitly tailored for SGR Code 128 barcodes
-const initReader = () => {
-    if (!codeReader) {
-        const hints = new Map();
-        // Force the scanner to look ONLY for Code 128 to maximize processing speed/accuracy
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128]);
-        codeReader = new ZXing.BrowserMultiFormatReader(hints);
-    }
-};
-
 const processBarcode = val => {
     if (!/^\d{28}$/.test(val)) return toast("Invalid 28-digit format");
-
-    // Check for duplicate preventions
-    if (vouchers.some(v => v.code === val)) return toast("Voucher already saved!");
-
     const amt = (parseInt(val.substring(20, 24), 10) / 10).toFixed(2);
     const hm = val.substring(14, 18);
     vouchers.unshift({
@@ -209,75 +195,67 @@ $('barcodeInput').oninput = e => {
     }
 };
 
-const stopCamera = () => {
-    if (codeReader) {
-        try { codeReader.reset(); } catch(e){}
-    }
-    const video = $('video');
-    if (video.srcObject) {
-        video.srcObject.getTracks().forEach(t => t.stop());
-    }
-    video.srcObject = null;
-    $('video-container').style.display = 'none';
-    $('camBtn').innerHTML = `<i class="fas fa-camera"></i> Toggle Camera`;
-    isScanning = false;
-};
-
-// Camera Button Action
-$('camBtn').onclick = async () => {
-    if (isScanning) {
-        stopCamera();
-        return;
-    }
-
-    initReader();
-    $('video-container').style.display = 'block';
-    $('camBtn').innerHTML = `<i class="fas fa-stop"></i> Stop Camera`;
-    isScanning = true;
-
-    // Standard high-resolution rear environment configuration
-    const constraints = {
-        video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        }
-    };
-
-    try {
-        await codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
-            if (result) {
-                const text = result.getText().trim();
-                if (/^\d{28}$/.test(text)) {
-                    stopCamera(); // Turn off the camera viewport right away on success
-                    processBarcode(text);
-                }
-            }
-        });
-    } catch (e) {
-        toast("Camera failed. Try manual entry.");
-        console.error(e);
-        stopCamera();
-    }
-};
-
 // Photo Upload Helper
 const scanImage = async (file) => {
-    initReader();
+    if (!codeReader) codeReader = new ZXing.BrowserMultiFormatReader();
     try {
         const result = await codeReader.decodeFromImageUrl(URL.createObjectURL(file));
         const text = result.getText().trim();
         if (/^\d{28}$/.test(text)) {
             processBarcode(text);
         } else {
-            toast("No valid 28-digit barcode detected.");
+            toast("No valid 28-digit barcode found in image");
         }
     } catch (e) {
-        toast("Could not read barcode from image.");
+        toast("Could not read barcode from photo");
         console.error(e);
     }
 };
 
+// Camera Button
+$('camBtn').onclick = async () => {
+    if (!codeReader) {
+        codeReader = new ZXing.BrowserMultiFormatReader();
+    }
+    const video = $('video');
+
+    if (isScanning) {
+        try { codeReader.reset(); } catch(e){}
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+        $('video-container').style.display = 'none';
+        $('camBtn').innerHTML = `<i class="fas fa-camera"></i> Toggle Camera`;
+        isScanning = false;
+        return;
+    }
+
+    $('video-container').style.display = 'block';
+    $('camBtn').innerHTML = `<i class="fas fa-stop"></i> Stop Camera`;
+    isScanning = true;
+
+    try {
+        const devices = await codeReader.listVideoInputDevices();
+        const backCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear')) || devices[0];
+
+        await codeReader.decodeFromVideoDevice(
+            backCamera ? backCamera.deviceId : undefined,
+            'video',
+            (result, err) => {
+                if (result) {
+                    const text = result.getText().trim();
+                    if (/^\d{28}$/.test(text)) {
+                        processBarcode(text);
+                    }
+                }
+            }
+        );
+    } catch (e) {
+        toast("Camera failed. Use photo upload instead.");
+        console.error(e);
+    }
+};
+
+// Add this new button after the camera button in HTML if you want (see below)
 window.uploadBarcode = () => {
     const input = document.createElement('input');
     input.type = 'file';
