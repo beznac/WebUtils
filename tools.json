@@ -25,8 +25,8 @@
   },
   {
     "folder": "sgr",
-    "name": "SGR Extractor",
+    "name": "QuickSGR",
     "icon": "fas fa-bottle-water",
-    "description": "Locate SGR machines in Iași"
+    "description": "Multitool for managing SGR collection in Romania"
   }
 ]

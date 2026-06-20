@@ -115,10 +115,17 @@ const dist = (la1, lo1, la2, lo2) => {
 const calcBearing = (la1, lo1, la2, lo2) => {
     const r = Math.PI / 180;
     const d = (lo2 - lo1) * r;
-    return (Math.atan2(
+    let bearing = (Math.atan2(
         Math.sin(d) * Math.cos(la2 * r),
         Math.cos(la1 * r) * Math.sin(la2 * r) - Math.sin(la1 * r) * Math.cos(la2 * r) * Math.cos(d)
     ) * (180 / Math.PI) + 360) % 360;
+    return bearing;
+};
+
+const shortestAngle = (target, current) => {
+    let diff = target - current;
+    diff = ((diff + 180) % 360) - 180;
+    return diff;
 };
 
 const getFreshPos = () => new Promise((res, rej) =>
@@ -214,8 +221,10 @@ let userPos = null;
 let curHeading = 0;
 const updateLoc = () => {
     if (!userPos || !sgrNodes.length) return;
+
     let near = null;
     let minD = Infinity;
+
     sgrNodes.forEach(n => {
         const d = dist(userPos.lat, userPos.lon, n.lat, n.lon);
         if (d < minD) {
@@ -223,12 +232,17 @@ const updateLoc = () => {
             near = n;
         }
     });
+
     if (near) {
         $('nearest-name').textContent = near.name;
         $('nearest-dist').textContent = minD < 1
             ? `${Math.round(minD * 1000)}m`
             : `${minD.toFixed(2)}km`;
-        $('direction-arrow').style.transform = `rotate(${calcBearing(userPos.lat, userPos.lon, near.lat, near.lon) - curHeading}deg)`;
+
+        const bearing = calcBearing(userPos.lat, userPos.lon, near.lat, near.lon);
+        const rotation = shortestAngle(bearing, curHeading);
+
+        $('direction-arrow').style.transform = `rotate(${rotation}deg)`;
     }
 };
 
