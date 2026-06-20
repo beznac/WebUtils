@@ -4,15 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SGR Extractor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
     body {
       background: #0a0a0a; color: #eaeaea;
       font-family: system-ui, sans-serif;
       margin: 0; padding: 15px;
-      height: 100vh; display: flex; flex-direction: column;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center;
     }
-    h2 { margin: 8px 0 15px; text-align: center; }
+    header {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0 15px;
+    }
+    h2 { font-size: 1.5rem; font-weight: 700; text-align: center; flex: 1; margin-right: 40px; margin-top: 0; margin-bottom: 0; }
+
+    .header-btn {
+      color: #aaa; padding: 8px; font-size: 1.3rem; text-decoration: none; transition: color 0.2s;
+    }
+    .header-btn:hover { color: #fff; }
+
+    div:not(.dl), #log, .dl { width: 100%; max-width: 600px; }
+
     button {
       padding: 12px 18px; background: #222; color: white;
       border: none; border-radius: 8px; font-size: 15px; cursor: pointer;
@@ -32,7 +50,11 @@
   </style>
 </head>
 <body>
-  <h2>SGR Extractor</h2>
+
+  <header>
+    <a href="https://zyg0t.github.io/WebUtils/" class="header-btn" title="WebUtils"><i class="fas fa-shapes"></i></a>
+    <h2>SGR Extractor</h2>
+  </header>
   
   <div>
     <button id="startBtn">Extract Data</button>
