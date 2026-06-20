@@ -78,7 +78,7 @@
       <div id="video-container"><video id="webcam-video" playsinline></video></div>
       <div class="input-row">
         <button id="start-cam-btn" class="btn"><i class="fas fa-camera"></i> Camera</button>
-        <button id="add-url-btn" class="btn"><i class="fas fa-link"></i> URL</button>
+        <button id="add-url-btn" class="btn"><i class="fas fa-link"></i> URL / Code</button>
       </div>
     </section>
 
@@ -173,40 +173,45 @@
     }
 
     function renderLists() {
-      const activeEntries = entries.filter(e => e.status === 'active');
-      const usedEntries = entries.filter(e => e.status === 'used');
+    const activeEntries = entries.filter(e => e.status === 'active');
+    const usedEntries = entries.filter(e => e.status === 'used');
 
-      $('active-title').innerHTML = `<i class="fas fa-bolt"></i> Active Codes (${activeEntries.length})`;
-      $('history-title').innerHTML = `<i class="fas fa-history"></i> History (${usedEntries.length})`;
+    $('active-title').innerHTML = `<i class="fas fa-bolt"></i> Active Codes (${activeEntries.length})`;
+    $('history-title').innerHTML = `<i class="fas fa-history"></i> History (${usedEntries.length})`;
 
-      const render = (items, isActive) => items.length ? items.map(e => {
+    const render = (items, isActive) => items.length ? items.map(e => {
         const isExpired = (Date.now() - e.timestamp) > SEVEN_DAYS;
         return `
-          <div class="entry">
+        <div class="entry">
             <div class="entry-header">
-              <div class="entry-code">${e.code}</div>
-              ${!isActive ? `
+            <div class="entry-code">${e.code}</div>
+            ${!isActive ? `
+                <div style="display: flex; gap: 4px;">
                 <button class="icon-btn" title="Restore" onclick="move('${e.id}', 'active'); toast('Restored');">
-                  <i class="fas fa-undo"></i>
+                    <i class="fas fa-undo"></i>
                 </button>
-              ` : ''}
+                <button class="icon-btn" title="Delete" style="color: #ff5555;" onclick="updateEntries(entries.filter(x => x.id !== '${e.id}')); toast('Deleted');">
+                    <i class="far fa-trash-can"></i>
+                </button>
+                </div>
+            ` : ''}
             </div>
             <div class="entry-meta ${isActive && isExpired ? 'expired' : ''}">
-              <i class="far fa-clock"></i> ${formatTime(e.timestamp)} ${isActive && isExpired ? '(Expired)' : ''}
+            <i class="far fa-clock"></i> ${formatTime(e.timestamp)} ${isActive && isExpired ? '(Expired)' : ''}
             </div>
             ${isActive ? `
-              <div class="input-row">
+            <div class="input-row">
                 <button class="btn" onclick="navigator.clipboard.writeText('${e.code}'); toast('Copied');"><i class="far fa-copy"></i> Copy</button>
                 <button class="btn" onclick="shareCode('${e.code}')"><i class="fas fa-share-nodes"></i> Share</button>
                 <button class="btn" onclick="move('${e.id}', 'used'); toast('Used');"><i class="fas fa-check"></i> Use</button>
-              </div>
+            </div>
             ` : ''}
-          </div>
+        </div>
         `;
-      }).join('') : `<div class="empty">[ Empty ]</div>`;
+    }).join('') : `<div class="empty">[ Empty ]</div>`;
 
-      $('active-list').innerHTML = render(activeEntries, true);
-      $('used-list').innerHTML = render(usedEntries, false);
+    $('active-list').innerHTML = render(activeEntries, true);
+    $('used-list').innerHTML = render(usedEntries, false);
     }
 
     window.move = (id, status) => updateEntries(entries.map(e => e.id === id ? { ...e, status } : e));
