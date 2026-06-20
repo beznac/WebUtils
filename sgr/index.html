@@ -1,113 +1,95 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SGR Multi-Tool</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <script src="https://unpkg.com/@zxing/library@0.19.0"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0a0a0a; color: #eaeaea; font-family: system-ui, sans-serif;
-      padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-    }
+    body { background: #0a0a0a; color: #eaeaea; font-family: system-ui, sans-serif; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
     header { width: 100%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; margin: 8px 0 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-    h2 { font-size: 1.4rem; font-weight: 700; flex: 1; text-align: center; }
-    main { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 25px; }
+    h2 { font-size: 1.2rem; font-weight: 600; text-align: center; flex: 1; }
+    .btn-back { display: flex; align-items: center; gap: 6px; color: #aaa; text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid #333; border-radius: 6px; transition: 0.2s; }
+    .btn-back:hover { background: #222; color: #fff; }
+    main { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
 
-    /* RADAR SECTION */
-    .radar-container {
-      width: 100%; aspect-ratio: 1; max-width: 350px; margin: 0 auto;
-      background: radial-gradient(circle, #1a2a1a 0%, #0a0a0a 100%);
-      border: 2px solid #2a4a2a; border-radius: 50%; position: relative; overflow: hidden;
-      box-shadow: 0 0 20px rgba(76, 175, 80, 0.1);
-    }
-    .radar-grid {
-      position: absolute; width: 100%; height: 100%; border-radius: 50%;
-      border: 1px solid rgba(76, 175, 80, 0.2); pointer-events: none;
-    }
-    .radar-grid::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(76, 175, 80, 0.2); }
-    .radar-grid::after { content: ''; position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: rgba(76, 175, 80, 0.2); }
+    .card { background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .card-title { font-size: 1rem; font-weight: 600; color: #ccc; display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid #222; padding-bottom: 8px; }
+    .title-left { display: flex; align-items: center; gap: 8px; }
+    .update-time { font-size: 11px; color: #555; font-weight: normal; }
 
-    .compass-layer { position: absolute; width: 100%; height: 100%; transition: transform 0.1s ease-out; }
-    .cardinal { position: absolute; font-size: 12px; font-weight: bold; color: #4caf50; }
-    .cardinal.n { top: 5px; left: 50%; transform: translateX(-50%); }
-    .cardinal.s { bottom: 5px; left: 50%; transform: translateX(-50%); }
-    .cardinal.e { right: 5px; top: 50%; transform: translateY(-50%); }
-    .cardinal.w { left: 5px; top: 50%; transform: translateY(-50%); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { padding: 10px; background: #1a1a1a; color: #ccc; border: 1px solid #333; border-radius: 6px; font-size: 13px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; font-weight: 500; }
+    button:hover { background: #2a2a2a; border-color: #555; color: #fff; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .center-btn {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: #4caf50; color: #000; border: none; border-radius: 50%;
-      width: 50px; height: 50px; font-size: 20px; cursor: pointer; z-index: 10;
-      box-shadow: 0 0 15px rgba(76, 175, 80, 0.5); transition: transform 0.2s;
-    }
-    .center-btn:active { transform: translate(-50%, -50%) scale(0.9); }
-    .sgr-node {
-      position: absolute; background: #81c784; border-radius: 50%; transform: translate(-50%, -50%);
-      box-shadow: 0 0 5px #81c784; cursor: pointer; transition: background 0.3s;
-    }
-    .node-info {
-      position: absolute; bottom: 10px; width: 100%; text-align: center; color: #aaa; font-size: 12px; pointer-events: none;
-    }
+    input { width: 100%; padding: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 6px; font-size: 14px; font-family: monospace; text-align: center; }
+    input:focus { border-color: #666; outline: none; }
 
-    /* CARD COMPONENTS */
-    .card { background: #111; border: 1px solid #333; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-    .card-title { font-size: 1.1rem; font-weight: 600; color: #4caf50; display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .locator-display { display: flex; align-items: center; justify-content: space-between; background: #000; border: 1px solid #222; border-radius: 6px; padding: 15px; }
+    .locator-name { font-size: 1.1rem; font-weight: bold; color: #fff; }
+    .locator-dist { font-size: 0.85rem; color: #777; }
+    .arrow-container { font-size: 2rem; color: #aaa; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s ease-out; }
 
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    button { padding: 12px; background: #222; color: #fff; border: 1px solid #333; border-radius: 8px; font-size: 14px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-    button:hover { background: #333; border-color: #555; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    input { width: 100%; padding: 12px; background: #0a0a0a; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 16px; font-family: monospace; }
-    input:focus { border-color: #4caf50; outline: none; }
-
-    #log { background: #000; border: 1px solid #222; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; height: 100px; overflow-y: auto; color: #888; }
+    #log { background: #000; border: 1px solid #222; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; height: 80px; overflow-y: auto; color: #777; }
     .dl-ops { display: none; }
 
-    /* VOUCHER LIST */
-    .voucher-list { display: flex; flex-direction: column; gap: 10px; }
-    .voucher { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .voucher.expired { border-color: #ff5555; background: #2a1111; }
-    .voucher.expired .v-val { color: #ff5555; }
-    .v-details { display: flex; flex-direction: column; gap: 4px; }
-    .v-code { font-family: monospace; font-size: 12px; color: #888; }
-    .v-val { font-size: 18px; font-weight: bold; color: #4caf50; }
-    .v-meta { font-size: 11px; color: #666; }
-    .btn-del { flex: none; width: 40px; height: 40px; border-radius: 50%; background: transparent; border: 1px solid #444; color: #ff5555; padding: 0; }
-    .btn-del:hover { background: #ff5555; color: #fff; border-color: #ff5555; }
+    #video-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; overflow: hidden; display: none; position: relative; border: 1px solid #333; }
+    #video-preview { width: 100%; height: 100%; object-fit: cover; }
+    .scan-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 1px; background: rgba(255, 255, 255, 0.4); box-shadow: 0 0 8px #fff; }
 
+    .voucher-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding-bottom: 5px; margin-top: 5px; }
+    .voucher-title { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+    .voucher-total { font-size: 13px; font-weight: bold; color: #ddd; }
+
+    .voucher-list { display: flex; flex-direction: column; gap: 8px; }
+    .voucher { background: #000; border: 1px solid #222; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .voucher:hover { border-color: #444; }
+    .voucher.expired { opacity: 0.5; }
+    .voucher.expired .v-val { text-decoration: line-through; }
+    .v-details { display: flex; flex-direction: column; gap: 3px; }
+    .v-code { font-family: monospace; font-size: 11px; color: #666; }
+    .v-val { font-size: 16px; font-weight: bold; color: #fff; }
+    .v-meta { font-size: 10px; color: #555; display: flex; gap: 6px; align-items: center; }
+    .btn-del { flex: none; width: 32px; height: 32px; border-radius: 4px; background: transparent; border: 1px solid #333; color: #666; padding: 0; }
+    .btn-del:hover { background: #222; color: #fff; border-color: #666; }
+
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); background: #222; color: #fff; border: 1px solid #444; padding: 8px 16px; border-radius: 6px; font-size: 12px; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
 
   <header>
+    <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Main</a>
     <h2>SGR Multi-Tool</h2>
+    <div style="width: 74px;"></div>
   </header>
 
   <main>
     <section class="card">
-      <div class="card-title"><i class="fas fa-crosshairs"></i> Radar Locații SGR</div>
-      <div class="radar-container" id="radar">
-        <div class="radar-grid"></div>
-        <div class="compass-layer" id="compass">
-          <div class="cardinal n">N</div>
-          <div class="cardinal s">S</div>
-          <div class="cardinal e">E</div>
-          <div class="cardinal w">V</div>
-          <div id="nodes-container"></div>
-        </div>
-        <button class="center-btn" id="radar-scan" title="Actualizează Locația"><i class="fas fa-satellite-dish"></i></button>
-        <div class="node-info" id="node-info">Apasă centrul pentru a scana</div>
+      <div class="card-title">
+        <div class="title-left"><i class="fas fa-location-arrow"></i> Nearest SGR</div>
       </div>
+      <div class="locator-display" id="locator-display" style="display: none;">
+        <div>
+          <div class="locator-name" id="nearest-name">Scanning...</div>
+          <div class="locator-dist" id="nearest-dist">-- m</div>
+        </div>
+        <div class="arrow-container" id="direction-arrow"><i class="fas fa-arrow-up"></i></div>
+      </div>
+      <button id="startTrackerBtn"><i class="fas fa-satellite-dish"></i> Start Tracking</button>
     </section>
 
     <section class="card">
-      <div class="card-title"><i class="fas fa-database"></i> Bază de Date SGR</div>
-      <div class="btn-row">
-        <button id="startBtn"><i class="fas fa-cloud-arrow-down"></i> Extrage Date</button>
+      <div class="card-title">
+        <div class="title-left"><i class="fas fa-database"></i> Database Extractor</div>
+        <span class="update-time" id="last-update"></span>
       </div>
-      <pre id="log">Așteptare...</pre>
+      <button id="startBtn"><i class="fas fa-cloud-arrow-down"></i> Extract Data</button>
+      <pre id="log">Ready...</pre>
       <div class="btn-row dl-ops" id="dl">
         <button onclick="saveData('gpx')">GPX</button>
         <button onclick="saveData('csv')">CSV</button>
@@ -116,279 +98,142 @@
     </section>
 
     <section class="card">
-      <div class="card-title"><i class="fas fa-barcode"></i> Portofel Bonuri</div>
-
-      <div class="btn-row" style="margin-bottom: 10px;">
-        <button id="camBtn"><i class="fas fa-camera"></i> Scanare Cameră</button>
+      <div class="card-title">
+        <div class="title-left"><i class="fas fa-barcode"></i> Voucher Wallet</div>
       </div>
-
-      <input type="text" id="barcodeInput" placeholder="Introdu manual 28 cifre..." maxlength="28" autocomplete="off">
-      <div id="barcodeError" style="color:#ff5555; font-size:12px; margin-top:5px; display:none;"></div>
-
-      <div style="margin-top: 15px; font-weight: bold; color: #aaa; border-bottom: 1px solid #333; padding-bottom: 5px;">Bonuri Active</div>
-      <div class="voucher-list" id="voucher-list">
-        </div>
+      <div id="video-container">
+        <video id="video-preview"></video>
+        <div class="scan-overlay"></div>
+      </div>
+      <button id="camBtn" style="margin-bottom: 5px;"><i class="fas fa-camera"></i> Toggle Camera</button>
+      <input type="text" id="barcodeInput" placeholder="28-digit manual entry..." maxlength="28" autocomplete="off">
+      <div class="voucher-header">
+        <span class="voucher-title">Saved</span>
+        <span class="voucher-total" id="voucher-total">0.00 RON</span>
+      </div>
+      <div class="voucher-list" id="voucher-list"></div>
     </section>
   </main>
 
+  <div id="toast"></div>
+
   <script>
-    // --- 1. SGR EXTRACTOR LOGIC ---
     const PROXY = "https://corsproxy.lmarkyos.workers.dev/?url=";
-    const IASI = { lat: 47.1585, lon: 27.6014 }, RAD = 15;
+    const RAD = 15;
     let sgrNodes = JSON.parse(localStorage.getItem('sgr_nodes')) || [];
+    let vouchers = JSON.parse(localStorage.getItem('sgr_vouchers')) || [];
 
-    const log = m => {
-      const el = document.getElementById('log');
-      el.textContent += `> ${m}\n`;
-      el.scrollTop = el.scrollHeight;
-    };
+    const $ = id => document.getElementById(id);
+    const toast = msg => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t.timer); t.timer = setTimeout(() => t.classList.remove('show'), 2000); };
+    const dist = (la1,lo1,la2,lo2) => { const p = Math.PI/180; return 12742 * Math.asin(Math.sqrt(0.5-Math.cos((la2-la1)*p)/2 + Math.cos(la1*p)*Math.cos(la2*p)*(1-Math.cos((lo2-lo1)*p))/2)); };
+    const calcBearing = (la1,lo1,la2,lo2) => { const r=Math.PI/180, d=(lo2-lo1)*r; return (Math.atan2(Math.sin(d)*Math.cos(la2*r), Math.cos(la1*r)*Math.sin(la2*r)-Math.sin(la1*r)*Math.cos(la2*r)*Math.cos(d))*(180/Math.PI)+360)%360; };
+    const getFreshPos = () => new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true }));
 
-    const dist = (la1,lo1,la2,lo2) => {
-      const p = Math.PI/180;
-      const a = 0.5-Math.cos((la2-la1)*p)/2 + Math.cos(la1*p)*Math.cos(la2*p)*(1-Math.cos((lo2-lo1)*p))/2;
-      return 12742 * Math.asin(Math.sqrt(a));
-    };
+    const log = m => { const el = $('log'); el.textContent += `> ${m}\n`; el.scrollTop = el.scrollHeight; };
 
-    if(sgrNodes.length > 0) document.getElementById('dl').style.display = 'flex';
+    if(sgrNodes.length > 0) {
+      $('dl').style.display = 'flex';
+      const savedTime = localStorage.getItem('sgr_nodes_updated');
+      if(savedTime) $('last-update').textContent = `Updated: ${savedTime}`;
+    }
 
-    document.getElementById('startBtn').onclick = async () => {
-      const btn = document.getElementById('startBtn');
-      btn.disabled = true;
-      document.getElementById('dl').style.display = 'none';
-      document.getElementById('log').textContent = '';
-      sgrNodes = [];
+    $('startBtn').onclick = async () => {
+      if (!navigator.geolocation) return toast("Geolocation not supported");
+      $('startBtn').disabled = true; $('dl').style.display = 'none'; $('log').textContent = ''; sgrNodes = [];
 
       try {
-        log("Se caută aparate...");
+        log("Acquiring current position...");
+        const position = await getFreshPos();
+        const uLat = position.coords.latitude;
+        const uLon = position.coords.longitude;
+
+        log("Fetching nodes...");
         const all = await (await fetch(PROXY + encodeURIComponent('https://sgrstatus.ro/wp-json/custom/v1/locations/'))).json();
-        const filtered = all.filter(l => dist(IASI.lat, IASI.lon, l.latitude, l.longitude) <= RAD);
+        const f = all.filter(l => dist(uLat, uLon, l.latitude, l.longitude) <= RAD);
+        log(`Found ${f.length} nodes within 15km.`);
 
-        log(`Găsite ${filtered.length} locații.`);
-
-        for (let [i,l] of filtered.entries()) {
+        for (let [i,l] of f.entries()) {
           const res = await (await fetch(PROXY + encodeURIComponent(`https://sgrstatus.ro/wp-json/custom/v1/location_info/?lat=${l.latitude}&lon=${l.longitude}`))).json();
           sgrNodes.push({name: res.name||"Node", status: res.status||"N/A", lat: l.latitude, lon: l.longitude});
-          if(i % 5 === 0) log(`Procesat ${i+1}/${filtered.length}...`);
+          if(i % 5 === 0) log(`Processed ${i+1}/${f.length}...`);
         }
 
+        const nowStr = new Date().toLocaleString('en-GB', { hour12: false });
         localStorage.setItem('sgr_nodes', JSON.stringify(sgrNodes));
-        document.getElementById('dl').style.display = 'flex';
-        log("Finalizat.");
-        if(currentPos) renderRadar(currentPos.lat, currentPos.lon); // Update radar if active
-      } catch(e) { log("Eroare: "+e.message); }
-      finally { btn.disabled = false; }
+        localStorage.setItem('sgr_nodes_updated', nowStr);
+
+        $('last-update').textContent = `Updated: ${nowStr}`;
+        $('dl').style.display = 'flex'; log("Done.");
+      } catch(e) {
+        log("Error: " + (e.message || "Failed to get location"));
+        if(localStorage.getItem('sgr_nodes')) $('dl').style.display = 'flex';
+      } finally {
+        $('startBtn').disabled = false;
+      }
     };
 
-    function saveData(t) {
-      let c, m, f = `sgr_data.${t}`;
-      if (t==='gpx') {
-        m = 'application/gpx+xml';
-        c = `<?xml version="1.1"?><gpx>${sgrNodes.map(l=>`<wpt lat="${l.lat}" lon="${l.lon}"><name>${l.name}</name></wpt>`).join('')}</gpx>`;
-      } else if (t==='csv') {
-        m = 'text/csv';
-        c = "Name,Status,Lat,Lon\n" + sgrNodes.map(l=>`"${l.name}","${l.status}",${l.lat},${l.lon}`).join('\n');
-      } else {
-        m = 'application/json';
-        c = JSON.stringify({type:"FeatureCollection", features:sgrNodes.map(l=>({type:"Feature", geometry:{type:"Point", coordinates:[l.lon,l.lat]}, properties:{name:l.name,status:l.status}}))});
+    window.saveData = t => {
+      let c, m, f = `sgr.${t}`;
+      if (t==='gpx') { m = 'application/gpx+xml'; c = `<?xml version="1.1"?><gpx>${sgrNodes.map(l=>`<wpt lat="${l.lat}" lon="${l.lon}"><name>${l.name}</name></wpt>`).join('')}</gpx>`; }
+      else if (t==='csv') { m = 'text/csv'; c = "Name,Status,Lat,Lon\n" + sgrNodes.map(l=>`"${l.name}","${l.status}",${l.lat},${l.lon}`).join('\n'); }
+      else { m = 'application/json'; c = JSON.stringify({type:"FeatureCollection", features:sgrNodes.map(l=>({type:"Feature", geometry:{type:"Point", coordinates:[l.lon,l.lat]}, properties:{name:l.name,status:l.status}}))}); }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([c],{type:m})); a.download = f; a.click();
+    };
+
+    let userPos = null, curHeading = 0;
+    const updateLoc = () => {
+      if (!userPos || !sgrNodes.length) return;
+      let near = null, minD = Infinity;
+      sgrNodes.forEach(n => { const d = dist(userPos.lat, userPos.lon, n.lat, n.lon); if (d < minD) { minD = d; near = n; } });
+      if (near) {
+        $('nearest-name').textContent = near.name;
+        $('nearest-dist').textContent = minD < 1 ? `${Math.round(minD * 1000)}m` : `${minD.toFixed(2)}km`;
+        $('direction-arrow').style.transform = `rotate(${calcBearing(userPos.lat, userPos.lon, near.lat, near.lon) - curHeading}deg)`;
       }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([c],{type:m}));
-      a.download = f; a.click();
-    }
+    };
 
+    $('startTrackerBtn').onclick = async () => {
+      $('startTrackerBtn').style.display = 'none'; $('locator-display').style.display = 'flex';
+      const handleOri = e => { curHeading = e.webkitCompassHeading || (360 - e.alpha); updateLoc(); };
+      if (typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function') {
+        try { if(await DeviceOrientationEvent.requestPermission() === 'granted') window.addEventListener('deviceorientation', handleOri); } catch(e){}
+      } else window.addEventListener('deviceorientationabsolute', handleOri);
+      if (navigator.geolocation) navigator.geolocation.watchPosition(p => { userPos = { lat: p.coords.latitude, lon: p.coords.longitude }; updateLoc(); }, e => toast("Location err"), {enableHighAccuracy: true});
+    };
 
-    // --- 2. RADAR & COMPASS LOGIC ---
-    let currentHeading = 0;
-    let currentPos = null;
-    const compassEl = document.getElementById('compass');
-    const nodesContainer = document.getElementById('nodes-container');
-    const infoEl = document.getElementById('node-info');
+    let codeReader = null, isCamOpen = false;
+    const processBarcode = val => {
+      if (!/^\d{28}$/.test(val)) return toast("Invalid 28-digit format");
+      const amt = (parseInt(val.substring(20, 24), 10) / 10).toFixed(2), hm = val.substring(14, 18);
+      vouchers.unshift({ id: Date.now().toString(), code: val, store: val.substring(2, 10), amount: amt, items: Math.floor(amt / 0.5), time: `${hm.substring(0,2)}:${hm.substring(2,4)}:${val.substring(18,20)}`, ts: Date.now() });
+      localStorage.setItem('sgr_vouchers', JSON.stringify(vouchers)); renderVouchers(); toast("Saved");
+    };
 
-    // Funcție pentru a calcula unghiul (bearing) dintre două coordonate
-    function calculateBearing(lat1, lon1, lat2, lon2) {
-      const toRad = Math.PI / 180;
-      const toDeg = 180 / Math.PI;
-      const dLon = (lon2 - lon1) * toRad;
-      const y = Math.sin(dLon) * Math.cos(lat2 * toRad);
-      const x = Math.cos(lat1 * toRad) * Math.sin(lat2 * toRad) -
-                Math.sin(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.cos(dLon);
-      return (Math.atan2(y, x) * toDeg + 360) % 360;
-    }
+    $('barcodeInput').oninput = e => { if (e.target.value.trim().length === 28) { processBarcode(e.target.value.trim()); e.target.value = ''; } };
 
-    function renderRadar(userLat, userLon) {
-      nodesContainer.innerHTML = '';
-      if(!sgrNodes || sgrNodes.length === 0) {
-        infoEl.innerText = "Nu există date SGR. Folosește Extractorul.";
-        return;
-      }
-
-      // Găsește locații pe o rază de 5km
-      const MAX_DISTANCE = 5; // km
-      const nearbyNodes = sgrNodes.map(n => {
-        const d = dist(userLat, userLon, n.lat, n.lon);
-        return { ...n, distance: d, bearing: calculateBearing(userLat, userLon, n.lat, n.lon) };
-      }).filter(n => n.distance <= MAX_DISTANCE);
-
-      if(nearbyNodes.length === 0) {
-        infoEl.innerText = "Niciun aparat în 5km.";
-        return;
-      }
-
-      infoEl.innerText = `${nearbyNodes.length} aparate în zonă.`;
-
-      nearbyNodes.forEach(node => {
-        // Mapăm distanța (0 - 5km) la raza div-ului (0 - 50%)
-        const distancePercent = (node.distance / MAX_DISTANCE) * 50;
-
-        // Dimensiunea punctului: mai aproape = mai mare (între 6px și 18px)
-        const size = Math.max(6, 18 - (node.distance * 2.4));
-
-        const dot = document.createElement('div');
-        dot.className = 'sgr-node';
-        dot.style.width = `${size}px`;
-        dot.style.height = `${size}px`;
-
-        // Poziționare polară: top 50%, left 50% + transformare rotație
-        dot.style.left = '50%';
-        dot.style.top = '50%';
-        // Rotim punctul la unghiul corect, apoi îl mutăm spre margine în funcție de distanță
-        dot.style.transform = `translate(-50%, -50%) rotate(${node.bearing}deg) translateY(-${distancePercent * 3}px)`;
-
-        dot.onclick = () => {
-          let dStr = node.distance < 1 ? `${Math.round(node.distance * 1000)}m` : `${node.distance.toFixed(1)}km`;
-          infoEl.innerText = `${node.name} - ${dStr}`;
-        };
-        nodesContainer.appendChild(dot);
-      });
-    }
-
-    document.getElementById('radar-scan').onclick = async () => {
-      // Cere permisiuni pentru orientare (necesar pe iOS)
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    $('camBtn').onclick = async () => {
+      if (!codeReader) codeReader = new ZXing.BrowserMultiFormatReader();
+      if (isCamOpen) { codeReader.reset(); $('video-container').style.display='none'; $('camBtn').innerHTML='<i class="fas fa-camera"></i> Toggle Camera'; isCamOpen=false; }
+      else {
         try {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
-          }
-        } catch (e) { console.error(e); }
-      } else {
-        window.addEventListener('deviceorientationabsolute', handleOrientation);
-      }
-
-      // Preia Geolocation
-      if (navigator.geolocation) {
-        infoEl.innerText = "Localizare...";
-        navigator.geolocation.getCurrentPosition(pos => {
-          currentPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          renderRadar(currentPos.lat, currentPos.lon);
-        }, err => {
-          infoEl.innerText = "Eroare locație. Ai permis accesul?";
-        }, { enableHighAccuracy: true });
+          $('video-container').style.display='block'; $('camBtn').innerHTML='<i class="fas fa-stop"></i> Stop Camera'; isCamOpen=true;
+          codeReader.decodeFromVideoDevice(null, 'video-preview', (res, err) => {
+            if (res) { processBarcode(res.text); codeReader.reset(); $('video-container').style.display='none'; $('camBtn').innerHTML='<i class="fas fa-camera"></i> Toggle Camera'; isCamOpen=false; }
+          });
+        } catch(e) { toast("Camera init failed"); }
       }
     };
 
-    function handleOrientation(e) {
-      // Calculează heading-ul (nordul magnetic/adevărat)
-      let heading = 0;
-      if (e.webkitCompassHeading) {
-        heading = e.webkitCompassHeading;
-      } else if (e.alpha !== null) {
-        heading = 360 - e.alpha;
-      }
-      currentHeading = heading;
-      // Rotim întregul layer cu busola și punctele în direcția opusă heading-ului
-      compassEl.style.transform = `rotate(-${currentHeading}deg)`;
-
-      // Pentru ca punctele să nu se rotească vizual (doar ca poziție orbitală), am putea anula rotația din interiorul lor, dar am folosit div-uri circulare deci nu este vizibil.
-    }
-
-
-    // --- 3. VOUCHER / BARCODE MANAGER LOGIC ---
-    let vouchers = JSON.parse(localStorage.getItem('sgr_vouchers')) || [];
-    const MONTHS_12_MS = 365 * 24 * 60 * 60 * 1000;
-
-    function renderVouchers() {
-      const list = document.getElementById('voucher-list');
-      if (vouchers.length === 0) {
-        list.innerHTML = '<div style="color:#555; text-align:center; font-size:13px;">Niciun bon salvat.</div>';
-        return;
-      }
-
-      list.innerHTML = vouchers.map(v => {
-        const isExpired = (Date.now() - v.timestamp) > MONTHS_12_MS;
-        const dateStr = new Date(v.timestamp).toLocaleDateString('ro-RO');
-
-        return `
-          <div class="voucher ${isExpired ? 'expired' : ''}">
-            <div class="v-details">
-              <div class="v-val">${v.amount} RON <span style="font-size:12px; font-weight:normal; color:#aaa;">(${v.items} buc)</span></div>
-              <div class="v-code">ID Mgz: ${v.store} | ${v.time}</div>
-              <div class="v-meta"><i class="far fa-calendar-alt"></i> Adăugat: ${dateStr} ${isExpired ? '- EXPIRAT' : ''}</div>
-            </div>
-            <button class="btn-del" onclick="deleteVoucher('${v.id}')" title="Șterge"><i class="fas fa-trash-alt"></i></button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function deleteVoucher(id) {
-      if(confirm('Sigur dorești să ștergi acest bon?')) {
-        vouchers = vouchers.filter(v => v.id !== id);
-        localStorage.setItem('sgr_vouchers', JSON.stringify(vouchers));
-        renderVouchers();
-      }
-    }
-
-    document.getElementById('barcodeInput').addEventListener('input', function(e) {
-      const rawValue = e.target.value.trim();
-      const err = document.getElementById('barcodeError');
-      err.style.display = 'none';
-
-      if (rawValue.length === 0) return;
-
-      if (!/^\d+$/.test(rawValue) || rawValue.length !== 28) {
-        if(rawValue.length === 28) {
-          err.textContent = "Codul trebuie să conțină doar cifre.";
-          err.style.display = 'block';
-        }
-        return;
-      }
-
-      // Preia logica "Cititor Cod SGR" furnizată
-      const storeId = rawValue.substring(2, 10);
-      const hourMinute = rawValue.substring(14, 18);
-      const seconds = rawValue.substring(18, 20);
-      const rawAmount = rawValue.substring(20, 24);
-
-      const amountRon = (parseInt(rawAmount, 10) / 10).toFixed(2);
-      const totalItems = Math.floor(parseFloat(amountRon) / 0.50);
-      const formattedTime = `${hourMinute.substring(0, 2)}:${hourMinute.substring(2, 4)}:${seconds}`;
-
-      // Salvează bonul nou
-      const newVoucher = {
-        id: crypto.randomUUID?.() || Date.now().toString(),
-        code: rawValue,
-        store: storeId,
-        amount: amountRon,
-        items: totalItems,
-        time: formattedTime,
-        timestamp: Date.now() // Timpul la care a fost scanat/adăugat (baza pentru 12 luni)
-      };
-
-      vouchers.unshift(newVoucher);
-      localStorage.setItem('sgr_vouchers', JSON.stringify(vouchers));
-
-      e.target.value = ''; // Resetează inputul
-      renderVouchers();
-    });
-
-    document.getElementById('camBtn').onclick = () => {
-      alert("Locație rezervată pentru integrarea viitoare a camerei (ex: QuaggaJS/ZXing) conform precizărilor 'logica va fi trimisa de mine'. Folosește input-ul manual mai jos pentru logica curentă.");
+    const renderVouchers = () => {
+      $('voucher-total').textContent = `${vouchers.reduce((s, v) => s + parseFloat(v.amount), 0).toFixed(2)} RON`;
+      $('voucher-list').innerHTML = vouchers.length ? vouchers.map(v => {
+        const exp = (Date.now() - v.ts) > 31536000000;
+        return `<div class="voucher ${exp?'expired':''}"><div class="v-details"><div class="v-val">${v.amount} RON <span style="font-size:11px;color:#777;font-weight:normal;">(${v.items} items)</span></div><div class="v-code">${v.store} | ${v.time}</div><div class="v-meta"><i class="far fa-calendar-alt"></i> ${new Date(v.ts).toLocaleDateString('en-GB')} ${exp?'(EXP)':''}</div></div><button class="btn-del" onclick="delV('${v.id}')"><i class="fas fa-times"></i></button></div>`;
+      }).join('') : '<div style="color:#555;font-size:12px;text-align:center;">No vouchers</div>';
     };
 
-    // Inițializare
+    window.delV = id => { vouchers = vouchers.filter(v => v.id !== id); localStorage.setItem('sgr_vouchers', JSON.stringify(vouchers)); renderVouchers(); };
     renderVouchers();
-
   </script>
 </body>
 </html>
