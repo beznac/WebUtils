@@ -152,18 +152,22 @@ $('startBtn').onclick = async () => {
         const all = await (await fetch(PROXY + encodeURIComponent('https://sgrstatus.ro/wp-json/custom/v1/locations/'))).json();
         const f = all.filter(l => dist(uLat, uLon, l.latitude, l.longitude) <= RAD);
         log(`Found ${f.length} nodes`);
-        for (let [i, l] of f.entries()) {
-            const res = await (await fetch(PROXY + encodeURIComponent(
-                `https://sgrstatus.ro/wp-json/custom/v1/location_info/?lat=${l.latitude}&lon=${l.longitude}`
-            ))).json();
-            sgrNodes.push({
-                name: res.name || "Node",
-                status: res.status || "N/A",
-                lat: l.latitude,
-                lon: l.longitude
-            });
-            if (i % 5 === 0) log(`Processed ${i + 1}/${f.length}`);
-        }
+        const CONCURRENCY = 8;
+
+    for (let i = 0; i < f.length; i += CONCURRENCY) {
+        sgrNodes.push(...(await Promise.all(
+            f.slice(i, i + CONCURRENCY).map(async ({ latitude: lat, longitude: lon }) =>
+                fetch(PROXY + encodeURIComponent(
+                    `https://sgrstatus.ro/wp-json/custom/v1/location_info/?lat=${lat}&lon=${lon}`
+                ))
+                    .then(r => r.json())
+                    .then(({ name = "Node", status = "N/A" }) => ({ name, status, lat, lon }))
+                    .catch(() => null)
+            )
+        )).filter(Boolean));
+
+        log(`Processed ${Math.min(i + CONCURRENCY, f.length)}/${f.length}`);
+    }
         const now = new Date().toLocaleString('en-GB', { hour12: false });
         localStorage.setItem('sgr_nodes', JSON.stringify(sgrNodes));
         localStorage.setItem('sgr_nodes_updated', now);
