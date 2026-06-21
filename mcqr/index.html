@@ -1,228 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>McQR</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, header, main, .card, .input-row, .entry-header { display: flex; flex-direction: column; }
-    body { background: #0a0a0a; color: #eaeaea; font-family: system-ui, sans-serif; padding: 20px; align-items: center; min-height: 100vh; }
-    header, main { width: 100%; max-width: 600px; }
-    header { flex-direction: row; justify-content: space-between; align-items: center; margin: 8px 0 15px; }
-    h2 { font-size: 1.5rem; font-weight: 700; text-align: center; flex: 1; margin-right: 40px; }
-    main { gap: 20px; }
-
-    .header-btn { color: #aaa; padding: 8px; font-size: 1.3rem; text-decoration: none; transition: color 0.2s; }
-    .header-btn:hover, .icon-btn:hover { color: #fff; }
-    .card { background: #111; border: 1px solid #333; border-radius: 8px; padding: 20px; gap: 14px; transition: all 0.2s; }
-    .card:hover { border-color: #555; background: #141414; }
-    #video-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 6px; overflow: hidden; display: none; }
-    #webcam-video { width: 100%; height: 100%; object-fit: cover; }
-    .input-row, .entry-header { flex-direction: row; gap: 10px; align-items: center; }
-    .entry-header { justify-content: space-between; align-items: flex-start; }
-    .btn { flex: 1; padding: 12px; background: #222; color: #fff; border: 1px solid #333; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
-    .btn:hover { background: #333; border-color: #555; }
-    .btn-danger { background: #1a1111; border-color: #2b1a1a; color: #775555; cursor: not-allowed; opacity: 0.6; }
-    .btn-danger.active { background: #662222; border-color: #883333; color: #ffcccc; cursor: pointer; opacity: 1; }
-    .btn-danger.active:hover { background: #882c2c; border-color: #aa4444; color: #fff; }
-    .section-title { font-size: 1.1rem; font-weight: 600; color: #aaa; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .list-container { display: flex; flex-direction: column; gap: 10px; }
-    .entry { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-    .entry-code { font-family: monospace; font-size: 15px; word-break: break-all; color: #eee; flex: 1; }
-    .entry-meta { font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 6px; }
-    .entry-meta.expired { color: #ff5555; font-weight: bold; }
-    .icon-btn { background: none; border: none; color: #aaa; cursor: pointer; padding: 4px 8px; font-size: 1.1rem; transition: color 0.2s; }
-    .used-section { opacity: 0.5; }
-    .used-section .entry-code { text-decoration: line-through; color: #777; }
-    .empty { color: #555; font-size: 0.9rem; text-align: center; padding: 20px; border: 1px dashed #222; border-radius: 6px; font-family: monospace; }
-
-    #toast { position: fixed; bottom: 20px; background: rgba(34, 34, 34, 0.9); color: #fff; border: 1px solid #444; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.6); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 1000; }
-    #toast.show { opacity: 1; transform: translateY(0); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>McQR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+        html, body { min-height: 100%; overflow-y: auto; }
+        :root {
+            --accent: #fff;
+            --accent-muted: #888;
+            --bg-body: #0a0a0a;
+            --bg-card: #141414;
+            --bg-input: #1a1a1a;
+            --text: #eaeaea;
+            --muted: #8c8c8c;
+            --border: #333;
+            --border-focus: #444;
+            --btn-bg: #1a1a1a;
+            --btn-hover: #222;
+            --font-family: "Inter", system-ui, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-width: 320px;
+            min-height: 100vh;
+            font-family: var(--font-family);
+            color: var(--text);
+            background: radial-gradient(circle at center, var(--bg-card) 0%, var(--bg-body) 100%) fixed;
+            padding-top: 28px;
+        }
+        header { width: 100%; max-width: 640px; margin: 0 auto 32px; padding: 0 20px; display: flex; align-items: center; gap: 12px; }
+        h2 { flex: 1; margin: 0; text-align: center; font-size: 1.9rem; font-weight: 700; }
+        .header-btn {
+            width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+            color: var(--muted); background: transparent; border: none; border-radius: 10px;
+            text-decoration: none; font-size: 1.2rem; flex-shrink: 0; transition: all 0.2s ease;
+        }
+        .header-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        main { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 20px 48px; display: flex; flex-direction: column; gap: 32px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+        .section-title { color: var(--muted); font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .input-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        button { padding: 12px 20px; font-size: 15px; font-weight: 600; color: #fff; background: var(--btn-bg); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s ease; }
+        button:hover { background: var(--btn-hover); border-color: var(--border-focus); }
+        button:active { transform: scale(0.97); }
+        .entry { background: var(--bg-input); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+        .entry:last-child { margin-bottom: 0; }
+        .entry-code { font-family: monospace; font-size: 15px; color: #eee; word-break: break-all; }
+        .entry-meta { margin-top: 8px; font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .empty { color: var(--muted); text-align: center; padding: 36px 20px; border: 1px dashed var(--border); border-radius: 14px; }
+        #video-container { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: #000; aspect-ratio: 4 / 3; }
+        #webcam-video { width: 100%; height: 100%; object-fit: cover; }
+        #toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); border: 1px solid var(--accent); color: var(--text);
+            padding: 12px 24px; border-radius: 9999px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,.45); opacity: 0; transition: all .3s ease;
+            z-index: 1000; white-space: nowrap;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+        .btn-danger { background: #1a1111; border-color: #442222; color: #cc8888; }
+        .btn-danger.active { background: #662222; border-color: #aa4444; color: #ffdddd; }
+        .btn-danger.active:hover { background: #882c2c; color: #fff; }
+        @media (max-width: 640px) {
+            body { padding-top: 20px; }
+            header { margin-bottom: 24px; }
+            main { gap: 24px; padding-bottom: 32px; }
+            .card { padding: 20px; }
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <a href="https://zyg0t.github.io/WebUtils/" class="header-btn" title="WebUtils">
+            <i class="fas fa-shapes"></i>
+        </a>
+        <h2>McQR</h2>
+        <div class="header-btn"></div>
+    </header>
 
-  <header>
-    <a href="https://zyg0t.github.io/WebUtils/" class="header-btn" title="WebUtils"><i class="fas fa-shapes"></i></a>
-    <h2>McQR</h2>
-  </header>
-
-  <main>
-    <section class="card">
-      <div id="video-container"><video id="webcam-video" playsinline></video></div>
-      <div class="input-row">
-        <button id="start-cam-btn" class="btn"><i class="fas fa-camera"></i> Camera</button>
-        <button id="add-url-btn" class="btn"><i class="fas fa-link"></i> URL / Code</button>
-      </div>
-    </section>
-
-    <section>
-      <div class="section-title"><span id="active-title"><i class="fas fa-bolt"></i> Active Codes (0)</span></div>
-      <div id="active-list" class="list-container"></div>
-    </section>
-
-    <section class="used-section">
-      <div class="section-title">
-        <span id="history-title"><i class="fas fa-history"></i> History (0)</span>
-        <button id="clear-all-used" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; flex: none;">Clear All</button>
-      </div>
-      <div id="used-list" class="list-container"></div>
-    </section>
-  </main>
-
-  <canvas id="qr-canvas" style="display: none;"></canvas>
-  <div id="toast"></div>
-
-  <script>
-    let entries = JSON.parse(localStorage.getItem('qr_entries')) || [];
-    let videoStream = null, animationFrameId = null;
-    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-
-    const $ = id => document.getElementById(id);
-    const video = $('webcam-video'), canvas = $('qr-canvas'), ctx = canvas.getContext('2d');
-
-    function init() {
-      renderLists();
-      setInterval(renderLists, 15000);
-      $('start-cam-btn').onclick = toggleCamera;
-      $('add-url-btn').onclick = promptForUrl;
-      $('clear-all-used').onclick = () => {
-        const used = entries.filter(e => e.status === 'used');
-        if (used.length === 0) return;
-
-        updateEntries(entries.filter(e => e.status !== 'used'));
-        toast("History cleared");
-      };
-    }
-
-    function toast(msg) {
-      const t = $('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      clearTimeout(t.timer);
-      t.timer = setTimeout(() => t.classList.remove('show'), 2000);
-    }
-
-    function updateEntries(newEntries) {
-      const active = newEntries.filter(e => e.status === 'active');
-      let used = newEntries.filter(e => e.status === 'used');
-      if (used.length > 100) used = used.slice(0, 100);
-      entries = [...active, ...used];
-      localStorage.setItem('qr_entries', JSON.stringify(entries));
-      renderLists();
-    }
-
-    function addEntry(text) {
-      if (!text) return;
-      const match = text.match(/CODE=([\w-]+)/i);
-      const code = match ? match[1] : text.trim();
-      if (!code) return;
-
-      if (entries.some(e => e.code.toUpperCase() === code.toUpperCase() && e.status === 'active')) {
-        return toast("Code already active");
-      }
-
-      updateEntries([{ id: crypto.randomUUID?.() || Date.now().toString(), code, timestamp: Date.now(), status: 'active' }, ...entries]);
-      toast("Code added");
-    }
-
-    function promptForUrl() {
-      const input = prompt("Enter URL or code:");
-      if (input) addEntry(input);
-    }
-
-    function shareCode(code) {
-      if (navigator.share) {
-        navigator.share({ title: 'McQR', text: code }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(code);
-        toast("Copied to clipboard");
-      }
-    }
-
-    function formatTime(ts) {
-      const diff = Math.floor((Date.now() - ts) / 60000);
-      if (diff < 1) return "just now";
-      if (diff < 60) return `${diff}m ago`;
-      if (diff < 1440) return `${Math.floor(diff/60)}h ago`;
-      return `${Math.floor(diff/1440)}d ago`;
-    }
-
-    function renderLists() {
-      const active = entries.filter(e => e.status === 'active');
-      const used = entries.filter(e => e.status === 'used');
-
-      $('active-title').innerHTML = `<i class="fas fa-bolt"></i> Active Codes (${active.length})`;
-      $('history-title').innerHTML = `<i class="fas fa-history"></i> History (${used.length})`;
-
-      const clearBtn = $('clear-all-used');
-      if (used.length > 0) {
-        clearBtn.classList.add('active');
-      } else {
-        clearBtn.classList.remove('active');
-      }
-
-      const render = (items, isActive) => items.length ? items.map(e => {
-        const isExpired = (Date.now() - e.timestamp) > SEVEN_DAYS;
-        return `
-          <div class="entry">
-            <div class="entry-header">
-              <div class="entry-code">${e.code}</div>
-              ${!isActive ? `
-                <div style="display: flex; gap: 4px;">
-                  <button class="icon-btn" title="Restore" onclick="move('${e.id}', 'active'); toast('Restored');"><i class="fas fa-undo"></i></button>
-                  <button class="icon-btn" title="Delete" style="color: #ff5555;" onclick="updateEntries(entries.filter(x => x.id !== '${e.id}')); toast('Deleted');"><i class="far fa-trash-can"></i></button>
-                </div>` : ''}
+    <main>
+        <section class="card">
+            <div id="video-container" style="display: none;">
+                <video id="webcam-video" playsinline></video>
             </div>
-            <div class="entry-meta ${isActive && isExpired ? 'expired' : ''}">
-              <i class="far fa-clock"></i> ${formatTime(e.timestamp)} ${isActive && isExpired ? '(Expired)' : ''}
+            <div class="input-row">
+                <button id="start-cam-btn" class="btn"><i class="fas fa-camera"></i> Camera</button>
+                <button id="add-url-btn" class="btn"><i class="fas fa-link"></i> URL / Code</button>
             </div>
-            ${isActive ? `
-              <div class="input-row">
-                <button class="btn" onclick="navigator.clipboard.writeText('${e.code}'); toast('Copied');"><i class="far fa-copy"></i> Copy</button>
-                <button class="btn" onclick="shareCode('${e.code}')"><i class="fas fa-share-nodes"></i> Share</button>
-                <button class="btn" onclick="move('${e.id}', 'used'); toast('Used');"><i class="fas fa-check"></i> Use</button>
-              </div>` : ''}
-          </div>`;
-      }).join('') : `<div class="empty">[ Empty ]</div>`;
+        </section>
 
-      $('active-list').innerHTML = render(active, true);
-      $('used-list').innerHTML = render(used, false);
-    }
+        <section>
+            <div class="section-title">
+                <span id="active-title"><i class="fas fa-bolt"></i> Active Codes (0)</span>
+            </div>
+            <div id="active-list"></div>
+        </section>
 
-    window.move = (id, status) => updateEntries(entries.map(e => e.id === id ? { ...e, status } : e));
+        <section class="used-section">
+            <div class="section-title">
+                <span id="history-title"><i class="fas fa-history"></i> History (0)</span>
+                <button id="clear-all-used" class="btn btn-danger" style="padding: 8px 16px; font-size: 14px;">Clear All</button>
+            </div>
+            <div id="used-list"></div>
+        </section>
+    </main>
 
-    async function toggleCamera() {
-      if (videoStream) {
-        videoStream.getTracks().forEach(t => t.stop());
-        cancelAnimationFrame(animationFrameId);
-        videoStream = animationFrameId = null;
-        $('video-container').style.display = "none";
-        return $('start-cam-btn').innerHTML = '<i class="fas fa-camera"></i> Camera';
-      }
-      try {
-        videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = videoStream; video.play();
-        $('video-container').style.display = "block";
-        $('start-cam-btn').innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
-        const tick = () => {
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.height = video.videoHeight; canvas.width = video.videoWidth;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" });
-            if (code) { addEntry(code.data); toggleCamera(); return; }
-          }
-          if (videoStream) animationFrameId = requestAnimationFrame(tick);
-        };
-        animationFrameId = requestAnimationFrame(tick);
-      } catch { toast("Camera error"); }
-    }
+    <canvas id="qr-canvas" style="display: none;"></canvas>
+    <div id="toast"></div>
 
-    init();
-  </script>
+    <script>
+        let entries = JSON.parse(localStorage.getItem('qr_entries')) || [];
+        let videoStream = null, animationFrameId = null;
+        const SEVEN_DAYS = 604800000;
+        const $ = id => document.getElementById(id);
+        const video = $('webcam-video'), canvas = $('qr-canvas'), ctx = canvas.getContext('2d');
+
+        function init() {
+            renderLists();
+            setInterval(renderLists, 15000);
+            $('start-cam-btn').onclick = toggleCamera;
+            $('add-url-btn').onclick = promptForUrl;
+            $('clear-all-used').onclick = () => {
+                if (!entries.some(e => e.status === 'used')) return;
+                updateEntries(entries.filter(e => e.status !== 'used'));
+                toast("History cleared");
+            };
+        }
+
+        function toast(msg) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t.timer);
+            t.timer = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        function updateEntries(newEntries) {
+            const active = newEntries.filter(e => e.status === 'active');
+            let used = newEntries.filter(e => e.status === 'used');
+            if (used.length > 100) used = used.slice(0, 100);
+            entries = [...active, ...used];
+            localStorage.setItem('qr_entries', JSON.stringify(entries));
+            renderLists();
+        }
+
+        function addEntry(text) {
+            if (!text) return;
+            const match = text.match(/CODE=([\w-]+)/i);
+            const code = (match ? match[1] : text).trim();
+            if (!code) return;
+            if (entries.some(e => e.code.toUpperCase() === code.toUpperCase() && e.status === 'active')) {
+                return toast("Code already active");
+            }
+            updateEntries([{
+                id: crypto.randomUUID?.() || Date.now().toString(),
+                code,
+                timestamp: Date.now(),
+                status: 'active'
+            }, ...entries]);
+            toast("Code added");
+        }
+
+        function promptForUrl() {
+            const input = prompt("Enter URL or code:");
+            if (input) addEntry(input);
+        }
+
+        function shareCode(code) {
+            if (navigator.share) {
+                navigator.share({ title: 'McQR', text: code }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(code);
+                toast("Copied to clipboard");
+            }
+        }
+
+        function formatTime(ts) {
+            const diff = Math.floor((Date.now() - ts) / 60000);
+            if (diff < 1) return "just now";
+            if (diff < 60) return `${diff}m ago`;
+            if (diff < 1440) return `${Math.floor(diff/60)}h ago`;
+            return `${Math.floor(diff/1440)}d ago`;
+        }
+
+        function renderLists() {
+            const active = entries.filter(e => e.status === 'active');
+            const used = entries.filter(e => e.status === 'used');
+
+            $('active-title').innerHTML = `<i class="fas fa-bolt"></i> Active Codes (${active.length})`;
+            $('history-title').innerHTML = `<i class="fas fa-history"></i> History (${used.length})`;
+            $('clear-all-used').classList.toggle('active', used.length > 0);
+
+            const render = (items, isActive) => items.length ? items.map(e => {
+                const isExpired = (Date.now() - e.timestamp) > SEVEN_DAYS;
+                return `
+                <div class="entry">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                        <div class="entry-code">${e.code}</div>
+                        ${!isActive ? `
+                        <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                            <button class="icon-btn" title="Restore" onclick="move('${e.id}', 'active'); toast('Restored');"><i class="fas fa-undo"></i></button>
+                            <button class="icon-btn" title="Delete" style="color: #ff6666;" onclick="updateEntries(entries.filter(x => x.id !== '${e.id}')); toast('Deleted');"><i class="far fa-trash-can"></i></button>
+                        </div>` : ''}
+                    </div>
+                    <div class="entry-meta ${isActive && isExpired ? 'expired' : ''}">
+                        <i class="far fa-clock"></i> ${formatTime(e.timestamp)} ${isActive && isExpired ? '(Expired)' : ''}
+                    </div>
+                    ${isActive ? `
+                    <div class="input-row" style="margin-top: 12px;">
+                        <button class="btn" onclick="navigator.clipboard.writeText('${e.code}'); toast('Copied');"><i class="far fa-copy"></i> Copy</button>
+                        <button class="btn" onclick="shareCode('${e.code}')"><i class="fas fa-share-nodes"></i> Share</button>
+                        <button class="btn" onclick="move('${e.id}', 'used'); toast('Used');"><i class="fas fa-check"></i> Use</button>
+                    </div>` : ''}
+                </div>`;
+            }).join('') : `<div class="empty">[ Empty ]</div>`;
+
+            $('active-list').innerHTML = render(active, true);
+            $('used-list').innerHTML = render(used, false);
+        }
+
+        window.move = (id, status) => updateEntries(entries.map(e => e.id === id ? { ...e, status } : e));
+
+        async function toggleCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                cancelAnimationFrame(animationFrameId);
+                videoStream = animationFrameId = null;
+                $('video-container').style.display = "none";
+                $('start-cam-btn').innerHTML = '<i class="fas fa-camera"></i> Camera';
+                return;
+            }
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = videoStream;
+                await video.play();
+                $('video-container').style.display = "block";
+                $('start-cam-btn').innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
+
+                const tick = () => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" });
+                        if (code) {
+                            addEntry(code.data);
+                            toggleCamera();
+                            return;
+                        }
+                    }
+                    if (videoStream) animationFrameId = requestAnimationFrame(tick);
+                };
+                animationFrameId = requestAnimationFrame(tick);
+            } catch (e) {
+                toast("Camera access denied or unavailable");
+            }
+        }
+
+        init();
+    </script>
 </body>
 </html>
