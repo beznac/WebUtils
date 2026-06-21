@@ -1,47 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebUtils</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebUtils</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 
-<style>
-*{box-sizing:border-box}body{background:#0a0a0a;color:#eaeaea;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:20px;min-height:100vh;display:flex;flex-direction:column}h1{text-align:center;font-size:2.2rem;margin:30px 0 25px;display:flex;align-items:center;justify-content:center;gap:14px}h1 i{color:#eaeaea}.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;max-width:1100px;margin:0 auto;width:100%}.tool-card{background:#111;border:1px solid #333;border-radius:8px;padding:24px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s}.tool-card:hover{background:#1a1a1a;border-color:#555}.tool-icon{font-size:2.6rem;margin-bottom:14px;color:#eaeaea}.tool-name{font-size:1.35rem;margin:0 0 10px 0;font-weight:600}.tool-desc{color:#ccc;line-height:1.5;flex:1;font-size:.95rem}.tool-link{margin-top:20px;align-self:flex-start;background:#222;color:white;padding:12px 22px;border-radius:8px;border:1px solid #333;font-size:14px}.tool-card:hover .tool-link{background:#333;border-color:#555}.loading{text-align:center;padding:60px 20px;grid-column:1/-1;color:#888}
-</style>
-  
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #eaeaea;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin: 30px 0 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+        }
+
+        h1 i {
+            color: #eaeaea;
+        }
+
+        .tools {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+            gap: 16px;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .tool-card {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 24px;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover {
+            background: #1a1a1a;
+            border-color: #555;
+        }
+
+        .tool-icon {
+            font-size: 2.6rem;
+            margin-bottom: 14px;
+            color: #eaeaea;
+        }
+
+        .tool-name {
+            font-size: 1.35rem;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+
+        .tool-desc {
+            color: #ccc;
+            line-height: 1.5;
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .tool-link {
+            margin-top: 20px;
+            align-self: flex-start;
+            background: #222;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover .tool-link {
+            background: #333;
+            border-color: #555;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            grid-column: 1 / -1;
+            color: #888;
+        }
+    </style>
 </head>
 <body>
-  <h1><i class="fas fa-shapes"></i> WebUtils</h1>
-  
-  <div class="tools" id="tools-container">
-    <div class="loading">Loading tools...</div>
-  </div>
+    <h1>
+        <i class="fas fa-shapes"></i>
+        WebUtils
+    </h1>
 
-  <script>
-    async function loadTools() {
-      const container = document.getElementById('tools-container');
-      const res = await fetch('tools.json');
-      const tools = await res.json();
-      
-      container.innerHTML = '';
-      tools.sort((a, b) => a.name.localeCompare(b.name));
-      
-      tools.forEach(tool => {
-        const card = document.createElement('a');
-        card.href = `${tool.folder}/`;
-        card.className = 'tool-card';
-        card.innerHTML = `
-          <div class="tool-icon"><i class="${tool.icon || 'fas fa-toolbox'}"></i></div>
-          <div class="tool-name">${tool.name}</div>
-          <div class="tool-desc">${tool.description || ''}</div>
-          <span class="tool-link">Open Tool →</span>
-        `;
-        container.appendChild(card);
-      });
-    }
-    window.onload = loadTools;
-  </script>
+    <div class="tools" id="tools-container">
+        <div class="loading">Loading tools...</div>
+    </div>
+
+    <script>
+        async function loadTools() {
+            const container = document.getElementById('tools-container');
+
+            try {
+                const res = await fetch('tools.json');
+                const tools = await res.json();
+
+                container.innerHTML = '';
+
+                tools.sort((a, b) => a.name.localeCompare(b.name));
+
+                tools.forEach(tool => {
+                    const card = document.createElement('a');
+                    const isExternal = /^https?:\/\//i.test(tool.folder);
+
+                    card.href = isExternal ? tool.folder : `${tool.folder}/`;
+
+                    if (isExternal) {
+                        card.target = '_blank';
+                        card.rel = 'noopener noreferrer';
+                    }
+
+                    card.className = 'tool-card';
+                    card.innerHTML = `
+                        <div class="tool-icon">
+                            <i class="${tool.icon || 'fas fa-toolbox'}"></i>
+                        </div>
+                        <div class="tool-name">${tool.name}</div>
+                        <div class="tool-desc">${tool.description || ''}</div>
+                        <span class="tool-link">
+                            Open Tool ${isExternal ? '<i class="fas fa-up-right-from-square"></i>' : '→'}
+                        </span>
+                    `;
+
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="loading" style="color:#ff6b6b;">
+                        Failed to load tools. Please make sure tools.json exists.
+                    </div>
+                `;
+                console.error('Error loading tools:', error);
+            }
+        }
+
+        window.onload = loadTools;
+    </script>
 </body>
 </html>

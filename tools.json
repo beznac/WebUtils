@@ -21,12 +21,18 @@
     "folder": "mcqr",
     "name": "McQR",
     "icon": "fas fa-qrcode",
-    "description": "Track MCDonald's receipt feedback codes"
+    "description": "Track McDonald's receipt feedback codes"
   },
   {
     "folder": "sgr",
     "name": "QuickSGR",
     "icon": "fas fa-bottle-water",
     "description": "Multitool for managing SGR collection in Romania"
+  },
+  {
+    "folder": "https://zyg0t.github.io/SliceCost/",
+    "name": "SliceCost",
+    "icon": "fas fa-coins",
+    "description": "Calculate advanced 3D printing costs easily"
   }
 ]
