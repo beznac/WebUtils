@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scooter Engine Synth</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            max-width: 400px;
+            width: 100%;
+        }
+        button {
+            background: #ff5722;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 20px 0;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:active { background: #e64a19; }
+        .stat { margin: 15px 0; font-size: 18px; }
+        .val { font-weight: bold; color: #ffb74d; font-size: 24px; }
+        .small { font-size: 12px; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Scooter Engine Sound Synth</h2>
+    <p>Mount phone to handlebars, tap start, and ride.</p>
+    
+    <button id="startBtn">START ENGINE</button>
+
+    <div class="stat">Calculated RPM: <span id="rpmVal" class="val">0</span></div>
+    <div class="stat">GPS Speed: <span id="speedVal" class="val">0.0</span> km/h</div>
+    <div class="stat">Throttle Load: <span id="loadVal" class="val">0</span>%</div>
+    
+    <p class="small">Note: Requires HTTPS and permissions for GPS/Motion to work on mobile browsers.</p>
+</div>
+
+<script>
+// --- AUDIO SYNTHESIS ENGINE ---
+let audioCtx = null;
+let oscillator = null;
+let waveshaper = null;
+let lowpassFilter = null;
+let gainNode = null;
+
+// --- PHYSICS STATE ---
+let currentGPSVelocity = 0; // m/s
+let fusedSpeed = 0;         // m/s (Fused GPS + Accelerometer tracker)
+let throttleLoad = 0;       // 0.0 to 1.0 (Estimated engine load)
+let lastAccelTime = performance.now();
+
+// --- ALGORITHM CONSTANTS ---
+const IDLE_RPM = 1000;
+const MAX_RPM = 8000;
+const MAX_SPEED = 9.72; // ~35 km/h in m/s (Segway G2 top speed)
+const ACCEL_FILTER_FACTOR = 0.15; // Smooths raw accelerometer noise
+
+function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // 1. Oscillator for raw engine core tone (Sawtooth mimics piston rasps)
+    oscillator = audioCtx.createOscillator();
+    oscillator.type = 'sawtooth';
+    
+    // 2. Waveshaper distortion adds dirt and realistic exhaust growl harmonics
+    waveshaper = audioCtx.createWaveShaper();
+    waveshaper.curve = makeDistortionCurve(40);
+    waveshaper.oversample = '4x';
+    
+    // 3. Lowpass Filter acts as the engine muffler, shaving off sharp digital buzz
+    lowpassFilter = audioCtx.createBiquadFilter();
+    lowpassFilter.type = 'lowpass';
+    
+    // 4. Master Volume
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0.15; // Keep safe baseline volume
+    
+    // Connections: Osc -> Distortion -> Muffler/Filter -> Volume -> Speakers
+    oscillator.connect(waveshaper);
+    waveshaper.connect(lowpassFilter);
+    lowpassFilter.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    animateEngineLoop();
+}
+
+// Generates asymmetrical wave shaping for mechanical sound qualities
+function makeDistortionCurve(amount) {
+    const k = typeof amount === 'number' ? amount : 50;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+        const x = (i * 2) / n_samples - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+}
+
+// --- FUSION & AUDIO UPDATER ALGORITHM (60 FPS) ---
+function animateEngineLoop() {
+    requestAnimationFrame(animateEngineLoop);
+    if (!audioCtx) return;
+
+    // 1. Fuse Speed: Drag the fused speed smoothly toward the last verified GPS speed
+    // This allows instant accelerometer responses without drifting infinitely from reality.
+    fusedSpeed = fusedSpeed * 0.96 + currentGPSVelocity * 0.04;
+    if (fusedSpeed < 0.1) fusedSpeed = 0;
+
+    // 2. Map Speed to base RPM
+    const speedRatio = Math.min(fusedSpeed / MAX_SPEED, 1.0);
+    let targetRPM = IDLE_RPM + speedRatio * (MAX_RPM - IDLE_RPM);
+
+    // 3. Dynamic Load Modifier: Add RPM spikes dynamically proportional to throttle stress
+    const loadRPMBonus = throttleLoad * 1500; 
+    targetRPM += loadRPMBonus;
+
+    // 4. Audio Control Matrix
+    // Target Frequency = RPM divided by 60 sec/min multiplied by 2 (cylinder firing pulses)
+    const engineFreq = (targetRPM / 60) * 2;
+    
+    // Smooth audio nodes instantly to prevent digital audio popping noises
+    oscillator.frequency.setTargetAtTime(engineFreq, audioCtx.currentTime, 0.05);
+
+    // Dynamic Exhaust Muffler: Open up filter at load / high speeds so it sounds louder and sharper
+    const baseCutoff = 250; 
+    const dynamicCutoff = baseCutoff + (speedRatio * 800) + (throttleLoad * 600);
+    lowpassFilter.frequency.setTargetAtTime(dynamicCutoff, audioCtx.currentTime, 0.05);
+
+    // Dynamic Volume: Louder during intense acceleration loads
+    const targetVolume = 0.10 + (throttleLoad * 0.15) + (speedRatio * 0.05);
+    gainNode.gain.setTargetAtTime(targetVolume, audioCtx.currentTime, 0.05);
+
+    // UI Updates
+    document.getElementById('rpmVal').textContent = Math.round(targetRPM);
+    document.getElementById('speedVal').textContent = (fusedSpeed * 3.6).toFixed(1);
+    document.getElementById('loadVal').textContent = Math.round(throttleLoad * 100);
+}
+
+// --- GPS DATA RECIVER ---
+if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+        (position) => {
+            if (position.coords.speed !== null && position.coords.speed >= 0) {
+                currentGPSVelocity = position.coords.speed;
+            }
+        },
+        (err) => console.log("GPS Error: ", err),
+        { enableHighAccuracy: true }
+    );
+}
+
+// --- ACCELEROMETER DATA RECEIVER ---
+function handleMotion(event) {
+    const now = performance.now();
+    const dt = (now - lastAccelTime) / 1000;
+    lastAccelTime = now;
+    if (dt <= 0) return;
+
+    // Read linear forward movement acceleration (ignoring gravitational pull)
+    // Assumes phone is mounted upright on handlebars facing the rider
+    let forwardAccel = event.acceleration?.z || event.acceleration?.y || 0;
+
+    // Clean out minor structural scooter vibrations
+    if (Math.abs(forwardAccel) < 0.2) forwardAccel = 0;
+
+    // Low-pass filter the raw sensor tracking data
+    let cleanAccel = forwardAccel * ACCEL_FILTER_FACTOR;
+
+    if (cleanAccel > 0) {
+        // Accelerating: Instantly boost predicted fused speed value ahead of lagging GPS tracking
+        fusedSpeed += cleanAccel * dt;
+        // Map acceleration directly to estimated engine load factor
+        throttleLoad = Math.min(cleanAccel / 2.5, 1.0); 
+    } else {
+        // Coasting or Braking: Drop engine engine load to idle state smoothly
+        throttleLoad = throttleLoad * 0.9; 
+        fusedSpeed += cleanAccel * dt; // Apply negative deceleration to fused speed tracker
+    }
+}
+
+// --- START ACTION TRIGGER ---
+document.getElementById('startBtn').addEventListener('click', async () => {
+    if (!audioCtx) {
+        // iOS requires explicit permission requests for motion sensors
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            try {
+                const permissionState = await DeviceMotionEvent.requestPermission();
+                if (permissionState === 'granted') {
+                    window.addEventListener('devicemotion', handleMotion);
+                }
+            } catch (error) {
+                alert('Motion permission rejected.');
+            }
+        } else {
+            window.addEventListener('devicemotion', handleMotion);
+        }
+
+        initAudio();
+        document.getElementById('startBtn').textContent = "ENGINE RUNNING";
+        document.getElementById('startBtn').style.background = "#4caf50";
+    }
+});
+</script>
+</body>
+</html>
